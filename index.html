@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="课堂随机点名提问系统：导入名单、立体球点名、抽中放大展示">
+<title>随机点名提问系统</title>
+<style>
+  :root{
+    --bg:#FFF3E2;
+    --bg-2:#FFF8EF;
+    --card:#FFFFFF;
+    --ink:#2E2A47;
+    --ink-2:#6E6A85;
+    --ink-3:#9A94AC;
+    --primary:#FF7A45;
+    --primary-strong:#F2651F;
+    --accent:#2EC4B6;
+    --pink:#FF6F91;
+    --yellow:#FFD166;
+    --line:#F0E2CE;
+    --shadow:0 10px 28px rgba(190,140,80,.16);
+    --radius:18px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  [hidden]{ display:none !important; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:linear-gradient(180deg,var(--bg) 0%,var(--bg-2) 100%);
+    color:var(--ink);
+    min-height:100dvh;
+    line-height:1.5;
+  }
+  button{ font-family:inherit; }
+
+  /* ---------- 布局骨架 ---------- */
+  .app-header{
+    max-width:960px;
+    margin:0 auto;
+    padding:18px 16px 6px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .app-title{ display:flex; align-items:center; gap:10px; }
+  .app-logo{ font-size:26px; line-height:1; }
+  .app-title h1{ font-size:20px; font-weight:800; letter-spacing:.5px; }
+  .app-subtitle{ font-size:12px; color:var(--ink-2); margin-top:2px; }
+  .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  .app-main{ max-width:960px; margin:0 auto; padding:10px 16px calc(28px + var(--safe-b)); }
+  .app-footer{
+    max-width:960px; margin:0 auto; padding:8px 16px 18px;
+    text-align:center; font-size:12px; color:var(--ink-3);
+  }
+
+  .panel{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:20px;
+  }
+
+  /* ---------- 按钮 ---------- */
+  .btn{
+    border:none; cursor:pointer; border-radius:999px;
+    font-size:15px; font-weight:700; padding:10px 18px;
+    transition:transform .12s ease, box-shadow .12s ease, background-color .12s ease, opacity .12s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{
+    background:linear-gradient(135deg,var(--primary) 0%,var(--primary-strong) 100%);
+    color:#fff;
+    box-shadow:0 6px 16px rgba(255,122,69,.35);
+  }
+  .btn-primary:hover{ box-shadow:0 8px 20px rgba(255,122,69,.45); }
+  .btn-primary:disabled{
+    background:linear-gradient(135deg,#F3C0A6 0%,#E8A88A 100%);
+    box-shadow:none; cursor:not-allowed;
+  }
+  .btn-ghost{
+    background:#FFF6EC; color:var(--ink);
+    border:1px solid var(--line);
+  }
+  .btn-ghost:hover{ background:#FFEFDD; }
+  .btn-big{ font-size:19px; padding:14px 34px; min-height:54px; }
+  .btn-mini{ font-size:13px; padding:6px 12px; background:#FFF6EC; border:1px solid var(--line); color:var(--ink); border-radius:999px; cursor:pointer; }
+
+  /* ---------- 导入视图 ---------- */
+  .import-view{ max-width:600px; margin:8px auto 0; }
+  .import-view h2{ font-size:18px; margin-bottom:4px; }
+  .import-intro{ font-size:13px; color:var(--ink-2); margin-bottom:14px; }
+
+  .upload-drop{
+    display:flex; align-items:center; justify-content:center;
+    border:2px dashed #F5C9A6; border-radius:16px;
+    background:#FFFBF5; padding:26px 16px; text-align:center;
+    cursor:pointer; transition:background-color .15s ease, border-color .15s ease;
+  }
+  .upload-drop.drag{ background:#FFF0DE; border-color:var(--primary); }
+  .upload-drop .upload-icon{ font-size:34px; display:block; }
+  .upload-drop strong{ display:block; font-size:15px; margin-top:6px; }
+  .upload-drop .upload-hint{ display:block; font-size:12px; color:var(--ink-3); margin-top:4px; font-weight:400; }
+
+  .divider{
+    display:flex; align-items:center; gap:12px; color:var(--ink-3);
+    font-size:12px; margin:16px 0;
+  }
+  .divider::before,.divider::after{
+    content:""; flex:1; height:1px; background:var(--line);
+  }
+  .import-view textarea{
+    width:100%; border:1px solid var(--line); border-radius:14px;
+    padding:12px; font-size:14px; font-family:inherit; color:var(--ink);
+    resize:vertical; min-height:96px; background:#FFFDF9;
+  }
+  .import-view textarea:focus{ outline:3px solid rgba(46,196,182,.25); border-color:var(--accent); }
+  .import-buttons{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  .import-note{ font-size:12px; color:var(--ink-3); margin-top:12px; }
+
+  /* ---------- 点名视图 ---------- */
+  .call-view{ padding:0; overflow:hidden; }
+  .call-layout{ display:grid; grid-template-columns:1fr; }
+  @media (min-width:880px){
+    .call-layout{ grid-template-columns:280px 1fr; }
+  }
+
+  .roster-panel{
+    border-bottom:1px solid var(--line);
+    padding:16px;
+    display:flex; flex-direction:column; max-height:320px;
+  }
+  @media (min-width:880px){
+    .roster-panel{ border-bottom:none; border-right:1px solid var(--line); max-height:620px; }
+  }
+  .roster-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:8px; }
+  .roster-title-group{ display:flex; align-items:baseline; gap:8px; }
+  .roster-head h2{ font-size:16px; }
+  .roster-count{ font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+  .roster-toggle-btn{
+    display:none; font-size:13px; padding:6px 12px;
+    background:#FFF6EC; border:1px solid var(--line); color:var(--ink);
+    border-radius:999px; cursor:pointer;
+  }
+  /* 手机端名单默认折叠，优先展示点名球 */
+  @media (max-width:879px){
+    .roster-panel{ max-height:none; padding:12px 16px 6px; }
+    .roster-toggle-btn{ display:inline-block; }
+    .roster-panel:not(.open) .roster-tools,
+    .roster-panel:not(.open) .roster-list{ display:none !important; }
+    .roster-panel.open .roster-tools{ display:flex; }
+    .roster-panel.open .roster-list{ display:flex; }
+    .roster-panel.open{ padding-bottom:14px; }
+  }
+  .roster-tools{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .toggle{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2); cursor:pointer; user-select:none; }
+  .toggle input{ width:17px; height:17px; accent-color:var(--accent); cursor:pointer; }
+  .roster-actions{ display:flex; gap:6px; }
+
+  .roster-list{
+    list-style:none; overflow-y:auto; flex:1;
+    display:flex; flex-direction:column; gap:6px;
+    min-height:80px; max-height:220px;
+  }
+  @media (min-width:880px){ .roster-list{ max-height:480px; } }
+  .roster-item{
+    display:flex; align-items:center; gap:8px;
+    padding:7px 10px; border:1px solid var(--line); border-radius:12px;
+    background:#FFFDF9; font-size:14px;
+  }
+  .roster-item.done{ opacity:.62; }
+  .roster-item.confirming{ border-color:var(--pink); background:#FFF0F4; }
+  .roster-check{ display:flex; align-items:center; cursor:pointer; }
+  .roster-check input{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+  .roster-emoji{ font-size:21px; line-height:1; margin:0 4px; }
+  .roster-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .roster-state{ font-size:12px; color:var(--accent); white-space:nowrap; }
+  .roster-del{
+    border:none; background:none; cursor:pointer;
+    width:26px; height:26px; border-radius:8px;
+    color:var(--ink-3); font-size:14px; line-height:1;
+  }
+  .roster-del:hover{ background:#FFE4E9; color:var(--pink); }
+  .roster-empty{ font-size:13px; color:var(--ink-3); padding:12px 0; text-align:center; }
+
+  /* ---------- 舞台与 3D 球 ---------- */
+  .stage-panel{ padding:14px 14px 22px; display:flex; flex-direction:column; align-items:center; }
+  .stats{ font-size:13px; color:var(--ink-2); margin-bottom:4px; font-variant-numeric:tabular-nums; }
+
+  .sphere-stage{
+    position:relative;
+    width:min(86vw, 480px);
+    aspect-ratio:1/1;
+    margin:8px auto 2px;
+    perspective:1200px;
+    border-radius:30px;
+    overflow:hidden;
+    background:
+      radial-gradient(1.6px 1.6px at 18% 24%, rgba(255,255,255,.9), transparent 100%),
+      radial-gradient(1.2px 1.2px at 76% 16%, rgba(255,255,255,.75), transparent 100%),
+      radial-gradient(1.8px 1.8px at 84% 64%, rgba(255,255,255,.85), transparent 100%),
+      radial-gradient(1.3px 1.3px at 30% 78%, rgba(255,255,255,.7), transparent 100%),
+      radial-gradient(1.5px 1.5px at 56% 88%, rgba(255,255,255,.8), transparent 100%),
+      radial-gradient(1.2px 1.2px at 10% 52%, rgba(255,255,255,.6), transparent 100%),
+      radial-gradient(1.6px 1.6px at 66% 38%, rgba(255,255,255,.9), transparent 100%),
+      radial-gradient(circle at 50% 44%, #4A5AA8 0%, #2E3670 52%, #1B2145 100%);
+    box-shadow:inset 0 0 60px rgba(20,24,60,.55), 0 10px 30px rgba(40,50,110,.22);
+  }
+  @media (min-width:880px){ .sphere-stage{ width:min(48vw, 560px); } }
+  /* 窄屏球体略收敛、内边距收紧，保证球与开始按钮一起首屏可见 */
+  @media (max-width:879px){
+    .stage-panel{ padding-top:6px; }
+    .sphere-stage{ width:min(84vw, 460px); margin:4px auto 2px; }
+  }
+  /* 矮视口（如手机横屏、小窗）进一步收敛，确保球与按钮同屏 */
+  @media (max-width:879px) and (max-height:720px){
+    .stage-panel{ padding-top:2px; }
+    .sphere-stage{ width:min(80vw, 420px); margin:0 auto 2px; }
+  }
+  .sphere-shell{
+    position:absolute; left:50%; top:50%;
+    width:calc(100% - 30px); aspect-ratio:1/1;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    background:radial-gradient(circle at 34% 28%, rgba(190,215,255,.38) 0%, rgba(110,145,235,.16) 45%, rgba(40,50,110,.06) 68%, transparent 74%);
+    box-shadow:inset -18px -22px 60px rgba(10,14,45,.5), inset 10px 12px 40px rgba(255,255,255,.10);
+    pointer-events:none;
+    z-index:1;
+  }
+  .sphere-ring{
+    position:absolute; left:50%; top:50%;
+    width:calc(100% - 16px); aspect-ratio:1/1;
+    transform:translate(-50%,-50%) rotateX(74deg);
+    border-radius:50%;
+    border:1.5px solid rgba(255,214,120,.22);
+    box-shadow:0 0 14px rgba(255,200,90,.16), inset 0 0 10px rgba(255,214,120,.12);
+    pointer-events:none;
+    z-index:1;
+  }
+  .sphere-ring.r2{
+    width:calc(100% - 54px);
+    border-color:rgba(150,190,255,.20);
+    transform:translate(-50%,-50%) rotateX(80deg) rotateZ(24deg);
+    box-shadow:0 0 10px rgba(130,170,255,.14), inset 0 0 10px rgba(150,190,255,.12);
+  }
+  .sphere{
+    position:absolute; inset:0;
+    transform-style:preserve-3d;
+    will-change:transform;
+    z-index:2;
+  }
+  .tag{
+    position:absolute; left:50%; top:50%;
+    width:86px; height:86px;
+    margin-left:-43px; margin-top:-43px;
+    transition:opacity .08s linear;
+  }
+  .tag-face{
+    position:absolute; inset:0; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0%, #FFE3D3 60%, #FFE3D3 100%);
+    box-shadow:
+      inset 0 -7px 12px rgba(60,40,10,.16),
+      inset 0 5px 10px rgba(255,255,255,.85),
+      0 4px 14px rgba(8,12,40,.42);
+    transition:transform .12s ease, box-shadow .12s ease;
+    will-change:transform;
+  }
+  .tag-emoji{
+    font-size:48px; line-height:1;
+    padding-bottom:16px;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.12));
+  }
+  .tag-name{
+    position:absolute; bottom:8px; left:50%;
+    transform:translateX(-50%);
+    max-width:84px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    background:rgba(255,255,255,.95);
+    border:1px solid rgba(0,0,0,.06);
+    border-radius:999px;
+    padding:1px 9px;
+    font-size:12.5px; font-weight:700; color:#6b5636; line-height:1.5;
+    box-shadow:0 2px 5px rgba(0,0,0,.2);
+  }
+  .tag.done .tag-face{ filter:grayscale(1); opacity:.45; }
+  .tag.done .tag-name{ opacity:.8; }
+  .tag.picked .tag-face{
+    background:radial-gradient(circle at 32% 26%, #FFF7DA 0%, #FFD166 58%, #FFB84D 100%);
+    box-shadow:
+      inset 0 -6px 12px rgba(160,90,10,.25),
+      inset 0 5px 10px rgba(255,255,255,.9),
+      0 0 0 5px rgba(255,209,102,.65),
+      0 0 30px rgba(255,170,60,.9);
+    animation:tag-pop .42s cubic-bezier(.2,.9,.3,1.35) both;
+  }
+  .tag.picked .tag-emoji{ animation:emoji-bounce .5s ease; }
+  @keyframes tag-pop{
+    from{ transform:scale(.6); }
+    to{ transform:scale(1); }
+  }
+  @keyframes emoji-bounce{
+    0%,100%{ transform:translateY(0) scale(1); }
+    40%{ transform:translateY(-6px) scale(1.14); }
+  }
+
+  .stage-actions{ margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+  /* ---------- 结果遮罩 ---------- */
+  .result-overlay{
+    position:fixed; inset:0;
+    background:rgba(46,42,71,.55);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    z-index:50;
+    backdrop-filter:blur(3px);
+  }
+  .result-card{
+    position:relative;
+    background:var(--card);
+    border-radius:28px;
+    box-shadow:0 24px 60px rgba(30,20,60,.35);
+    width:min(92vw, 430px);
+    padding:28px 22px 24px;
+    text-align:center;
+    animation:card-in .34s cubic-bezier(.2,.9,.3,1.2) both;
+    overflow:hidden;
+  }
+  @keyframes card-in{
+    from{ opacity:0; transform:scale(.82) translateY(16px); }
+    to{ opacity:1; transform:scale(1) translateY(0); }
+  }
+  .result-tag{
+    display:inline-block; font-size:13px; color:var(--ink-2);
+    background:#FFF1E3; border:1px solid var(--line);
+    border-radius:999px; padding:4px 14px; margin-bottom:10px;
+  }
+  .result-animal{ font-size:clamp(84px, 26vw, 148px); line-height:1.1; margin:8px 0 2px; }
+  .result-name{
+    font-size:clamp(30px, 9vw, 46px); font-weight:900; letter-spacing:2px;
+    margin:6px 0 2px; color:var(--ink); word-break:break-all;
+  }
+  .result-saying{ font-size:15px; color:var(--ink-2); margin-bottom:18px; }
+  .result-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+  .confetti{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .confetti-emoji{
+    position:absolute; top:-32px; font-size:24px;
+    animation:confetti-fall 1.9s ease-in forwards;
+  }
+  @keyframes confetti-fall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(58vh) rotate(360deg); opacity:0; }
+  }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed; left:50%; bottom:calc(24px + var(--safe-b));
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff;
+    font-size:14px; border-radius:999px; padding:11px 20px;
+    opacity:0; pointer-events:none; z-index:80;
+    transition:opacity .25s ease, transform .25s ease;
+    max-width:88vw; text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ---------- 焦点与动效偏好 ---------- */
+  :focus-visible{ outline:3px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  .storage-warn{
+    display:none; margin:0 0 14px; padding:10px 14px; border-radius:10px;
+    background:#FFF3CD; color:#7A5B00; border:1px solid #FFE08A; font-size:14px; line-height:1.5;
+  }
+  .storage-warn.show{ display:block; }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001s !important; transition-duration:.001s !important; }
+    .result-card{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-title">
+    <span class="app-logo" aria-hidden="true">🎲</span>
+    <div>
+      <h1>随机点名提问</h1>
+      <p class="app-subtitle">上传名单 · 立体球点名 · 抽中放大展示</p>
+    </div>
+  </div>
+  <div class="header-actions" id="headerActions" hidden>
+    <button type="button" class="btn btn-mini" id="btnSound" aria-pressed="true">🔊 音效开</button>
+    <button type="button" class="btn btn-mini" id="btnResetRound">↺ 重置本轮</button>
+    <button type="button" class="btn btn-mini" id="btnClearAll">清空名单</button>
+  </div>
+</header>
+
+<main class="app-main">
+
+  <!-- 导入视图 -->
+  <section class="panel import-view" id="importView" aria-labelledby="importTitle">
+    <h2 id="importTitle">准备名单</h2>
+    <p class="import-intro">上传 txt / csv 文件，或直接粘贴学生姓名（每行一个，也支持逗号、顿号分隔）。导入成功后每位同学会自动匹配一个卡通动物图案。</p>
+
+    <div class="storage-warn" id="storageWarn" role="alert">⚠ 当前浏览器存储不可用，名单无法自动保存：刷新页面后需重新导入。</div>
+
+    <label class="upload-drop" id="dropZone">
+      <input type="file" id="fileInput" accept=".txt,.csv,.tsv,text/plain,text/csv" hidden>
+      <span class="upload-inner">
+        <span class="upload-icon" aria-hidden="true">📂</span>
+        <strong>点击选择文件，或拖拽到这里</strong>
+        <span class="upload-hint">支持 .txt / .csv，自动识别 UTF-8 / GBK 编码</span>
+      </span>
+    </label>
+
+    <div class="divider">或者直接粘贴</div>
+
+    <textarea id="pasteArea" rows="4" placeholder="每行一个学生姓名，例如：&#10;张三&#10;李四&#10;王五" aria-label="粘贴学生名单"></textarea>
+
+    <div class="import-buttons">
+      <button type="button" class="btn btn-primary" id="btnImportPaste">导入名单</button>
+      <button type="button" class="btn btn-ghost" id="btnSample">填入示例名单</button>
+    </div>
+    <p class="import-note">示例名单为演示数据，方便第一次体验；重复姓名会自动去重。名单会自动保存在本浏览器中，下次打开自动沿用。</p>
+  </section>
+
+  <!-- 点名视图 -->
+  <section class="panel call-view" id="callView" hidden aria-labelledby="callTitle">
+    <h2 id="callTitle" class="visually-hidden" style="position:absolute;clip:rect(0 0 0 0);width:1px;height:1px;overflow:hidden;">点名舞台</h2>
+    <div class="call-layout">
+      <aside class="roster-panel" aria-label="名单管理">
+        <div class="roster-head">
+          <div class="roster-title-group">
+            <h2>名单</h2>
+            <span class="roster-count" id="rosterCount">0 人</span>
+          </div>
+          <button type="button" class="roster-toggle-btn" id="btnToggleRoster" aria-expanded="false">展开名单 ▾</button>
+        </div>
+        <div class="roster-tools">
+          <label class="toggle">
+            <input type="checkbox" id="toggleExclude" checked>
+            <span>已抽中的不再参与</span>
+          </label>
+          <div class="roster-actions">
+            <button type="button" class="btn-mini" id="btnPickAll">全选</button>
+            <button type="button" class="btn-mini" id="btnPickNone">全不选</button>
+          </div>
+        </div>
+        <ul class="roster-list" id="rosterList" aria-live="polite"></ul>
+      </aside>
+      <div class="stage-panel">
+        <p class="stats" id="statsBar" aria-live="polite"></p>
+        <div class="sphere-stage" id="sphereStage">
+          <div class="sphere-shell" aria-hidden="true"></div>
+          <div class="sphere-ring" aria-hidden="true"></div>
+          <div class="sphere-ring r2" aria-hidden="true"></div>
+          <div class="sphere" id="sphere" aria-label="点名球，球面上显示每位学生的名字与卡通动物图案"></div>
+        </div>
+        <div class="stage-actions">
+          <button type="button" class="btn btn-primary btn-big" id="btnStart">🎯 开始点名</button>
+        </div>
+        <p class="import-note" style="margin-top:10px;text-align:center;">点击“开始点名”后球体会旋转，停稳后放大展示被抽中的同学</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">名单自动保存在本浏览器中，刷新后自动沿用 · 点右上角「清空名单」可清除 · 卡通动物图案由系统自动分配</footer>
+
+<!-- 结果遮罩 -->
+<div class="result-overlay" id="resultOverlay" hidden>
+  <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="resultName">
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+    <p class="result-tag" id="resultTag"></p>
+    <div class="result-animal" id="resultAnimal" aria-hidden="true">🦊</div>
+    <h2 class="result-name" id="resultName">张三</h2>
+    <p class="result-saying">该你回答问题啦！</p>
+    <div class="result-actions">
+      <button type="button" class="btn btn-primary" id="btnNext">继续点名</button>
+      <button type="button" class="btn btn-ghost" id="btnRedraw">换一个人</button>
+      <button type="button" class="btn btn-ghost" id="btnClose">暂时关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================= 只读环境偏好 ================= */
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ================= 动物图案池 ================= */
+  var ANIMALS = [
+    { e: "\uD83D\uDC36", n: "小狗" }, { e: "\uD83D\uDC31", n: "小猫" }, { e: "\uD83E\uDD8A", n: "狐狸" },
+    { e: "\uD83D\uDC3B", n: "小熊" }, { e: "\uD83D\uDC3C", n: "熊猫" }, { e: "\uD83D\uDC28", n: "考拉" },
+    { e: "\uD83D\uDC2F", n: "老虎" }, { e: "\uD83E\uDD81", n: "狮子" }, { e: "\uD83D\uDC2E", n: "奶牛" },
+    { e: "\uD83D\uDC37", n: "小猪" }, { e: "\uD83D\uDC38", n: "青蛙" }, { e: "\uD83D\uDC35", n: "猴子" },
+    { e: "\uD83D\uDC14", n: "小鸡" }, { e: "\uD83D\uDC27", n: "企鹅" }, { e: "\uD83D\uDC26", n: "小鸟" },
+    { e: "\uD83E\uDD89", n: "猫头鹰" }, { e: "\uD83D\uDC30", n: "兔子" }, { e: "\uD83E\uDD9D", n: "浣熊" },
+    { e: "\uD83E\uDD84", n: "独角兽" }, { e: "\uD83D\uDC34", n: "小马" }, { e: "\uD83D\uDC11", n: "绵羊" },
+    { e: "\uD83E\uDD8C", n: "小鹿" }, { e: "\uD83E\uDD92", n: "长颈鹿" }, { e: "\uD83D\uDC18", n: "大象" },
+    { e: "\uD83E\uDD8F", n: "犀牛" }, { e: "\uD83D\uDC2A", n: "骆驼" }, { e: "\uD83D\uDC03", n: "水牛" },
+    { e: "\uD83D\uDC02", n: "野牛" }, { e: "\uD83D\uDC36\u200D\uD83D\uDC3E", n: "导盲犬" }, { e: "\uD83D\uDC3A", n: "山羊" },
+    { e: "\uD83D\uDC22", n: "乌龟" }, { e: "\uD83D\uDC0D", n: "小蛇" }, { e: "\uD83E\uDD8E", n: "壁虎" },
+    { e: "\uD83D\uDC19", n: "章鱼" }, { e: "\uD83E\uDD91", n: "鱿鱼" }, { e: "\uD83E\uDD80", n: "螃蟹" },
+    { e: "\uD83E\uDD9E", n: "龙虾" }, { e: "\uD83E\uDD90", n: "虾" }, { e: "\uD83D\uDC20", n: "小鱼" },
+    { e: "\uD83D\uDC21", n: "热带鱼" }, { e: "\uD83D\uDC2C", n: "海豚" }, { e: "\uD83E\uDD88", n: "鲨鱼" },
+    { e: "\uD83D\uDC33", n: "鲸鱼" }, { e: "\uD83D\uDC0B", n: "虎鲸" }, { e: "\uD83E\uDDAD", n: "海豹" },
+    { e: "\uD83E\uDD9A", n: "孔雀" }, { e: "\uD83E\uDD9C", n: "鹦鹉" }, { e: "\uD83E\uDD87", n: "蝙蝠" },
+    { e: "\uD83E\uDD83", n: "火鸡" }, { e: "\uD83E\uDDA2", n: "天鹅" }, { e: "\uD83E\uDDA9", n: "火烈鸟" },
+    { e: "\uD83D\uDD4A\uFE0F", n: "白鸽" }, { e: "\uD83E\uDDA8", n: "臭鼬" }, { e: "\uD83E\uDDA1", n: "獾" },
+    { e: "\uD83E\uDDAB", n: "河狸" }, { e: "\uD83E\uDDA6", n: "水獭" }, { e: "\uD83E\uDDA5", n: "树懒" },
+    { e: "\uD83E\uDD94", n: "刺猬" }, { e: "\uD83D\uDC09", n: "龙" }, { e: "\uD83E\uDDA4", n: "渡渡鸟" },
+    { e: "\uD83E\uDDA3", n: "猛犸象" }, { e: "\uD83D\uDC39", n: "仓鼠" }, { e: "\uD83E\uDD93", n: "斑马" },
+    { e: "\uD83E\uDD9B", n: "河马" }
+  ];
+  var TAG_BG = ["#FFE3D3", "#D8F3EF", "#FFE0EC", "#FFF1C9", "#E3E8FF", "#E5F5DC", "#FFE9E9", "#E0F2FE"];
+
+  /* ================= 内存状态 ================= */
+  var state = {
+    students: [],      // { id, name, animal, active, picked }
+    nextId: 1,
+    pickedRound: 0,    // 本轮已点人数（含换人次数中的已点记录）
+    pickedOrder: [],   // 本轮已点名 id 列表（用于撤销换人）
+    excludePicked: true,
+    phase: "idle"      // idle | spinning | stopped
+  };
+  var pickId = null;   // 当前抽中的学生 id
+
+  /* 示例名单（演示数据） */
+  var SAMPLE_NAMES = ["张一诺", "李思雨", "王浩然", "刘梓萱", "陈子轩", "杨紫彤", "赵一鸣", "黄诗涵",
+    "周俊杰", "吴欣怡", "徐梓涵", "孙明轩", "马可欣", "朱雨桐", "胡宇航", "郭芷若", "林嘉豪", "何静怡", "高晨曦", "罗雨欣"];
+
+  /* ================= DOM 引用 ================= */
+  var importView = document.getElementById("importView");
+  var callView = document.getElementById("callView");
+  var headerActions = document.getElementById("headerActions");
+  var fileInput = document.getElementById("fileInput");
+  var dropZone = document.getElementById("dropZone");
+  var pasteArea = document.getElementById("pasteArea");
+  var btnImportPaste = document.getElementById("btnImportPaste");
+  var btnSample = document.getElementById("btnSample");
+  var rosterList = document.getElementById("rosterList");
+  var rosterCount = document.getElementById("rosterCount");
+  var statsBar = document.getElementById("statsBar");
+  var toggleExclude = document.getElementById("toggleExclude");
+  var btnPickAll = document.getElementById("btnPickAll");
+  var btnPickNone = document.getElementById("btnPickNone");
+  var btnResetRound = document.getElementById("btnResetRound");
+  var btnClearAll = document.getElementById("btnClearAll");
+  var btnSound = document.getElementById("btnSound");
+  var btnStart = document.getElementById("btnStart");
+  var sphereEl = document.getElementById("sphere");
+  var resultOverlay = document.getElementById("resultOverlay");
+  var resultTag = document.getElementById("resultTag");
+  var resultAnimal = document.getElementById("resultAnimal");
+  var resultName = document.getElementById("resultName");
+  var confettiEl = document.getElementById("confetti");
+  var btnNext = document.getElementById("btnNext");
+  var btnRedraw = document.getElementById("btnRedraw");
+  var btnClose = document.getElementById("btnClose");
+  var toastEl = document.getElementById("toast");
+  var rosterPanel = document.querySelector(".roster-panel");
+  var btnToggleRoster = document.getElementById("btnToggleRoster");
+  var storageWarn = document.getElementById("storageWarn");
+
+  btnToggleRoster.addEventListener("click", function () {
+    var open = rosterPanel.classList.toggle("open");
+    btnToggleRoster.textContent = open ? "收起名单 ▴" : "展开名单 ▾";
+    btnToggleRoster.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  /* ================= Toast ================= */
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2600);
+  }
+
+  /* ================= 名单持久化（localStorage） ================= */
+  var STORE_KEY = "random_call_roster_v1";
+  var storageOk = true;
+
+  function showStorageWarn() {
+    storageWarn.classList.add("show");
+  }
+
+  // 保存当前名单：仅保存姓名列表，恢复时按同一顺序重新匹配动物图案
+  function saveRoster() {
+    if (!storageOk) return;
+    try {
+      var names = state.students.map(function (s) { return s.name; });
+      window.localStorage.setItem(STORE_KEY, JSON.stringify({ names: names, savedAt: Date.now() }));
+    } catch (err) {
+      storageOk = false;
+      showStorageWarn();
+      toast("名单已导入，但浏览器存储不可用，刷新后需重新导入");
+    }
+  }
+
+  // 手动清空名单时同步清除已保存的名单
+  function clearRosterStore() {
+    if (!storageOk) return;
+    try { window.localStorage.removeItem(STORE_KEY); } catch (err) { storageOk = false; showStorageWarn(); }
+  }
+
+  // 页面加载时自动恢复上次名单；返回是否成功恢复
+  function restoreRoster() {
+    try {
+      var raw = window.localStorage.getItem(STORE_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.names) || data.names.length === 0) return false;
+      importNames({ names: data.names, dup: 0 }, "上次自动保存");
+      return true;
+    } catch (err) {
+      // 存储不可用或数据损坏：不阻断正常使用，仅提示降级
+      storageOk = false;
+      showStorageWarn();
+      toast("浏览器存储不可用，名单无法自动保存，刷新后需重新导入");
+      return false;
+    }
+  }
+
+  /* ================= 名单导入 ================= */
+  function decodeText(buffer) {
+    var bytes = new Uint8Array(buffer);
+    if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+      return new TextDecoder("utf-16le").decode(bytes.subarray(2));
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+      return new TextDecoder("utf-16be").decode(bytes.subarray(2));
+    }
+    try {
+      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch (err) {
+      try { return new TextDecoder("gbk").decode(bytes); }
+      catch (err2) { return new TextDecoder("utf-8").decode(bytes); }
+    }
+  }
+
+  function parseNames(text) {
+    var seen = {};
+    var names = [];
+    var dupCount = 0;
+    var lines = text.split(/\r\n|\r|\n/);
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var cells = line.split(/[,，、;；\t]+/);
+      for (var j = 0; j < cells.length; j++) {
+        var part = cells[j].trim().replace(/^["']+|["']+$/g, "");
+        if (!part) continue;
+        if (part.length > 12) continue; // 明显不是人名的长串跳过
+        if (!seen[part]) { seen[part] = true; names.push(part); }
+        else { dupCount += 1; }
+      }
+    }
+    return { names: names, dup: dupCount };
+  }
+
+  function importNames(parsed, sourceNote) {
+    var names = parsed.names;
+    var MAX = 150;
+    var kept = names.slice(0, MAX);
+    var dup = parsed.dup + (names.length - kept.length);
+    if (names.length > MAX) {
+      toast("人数超过 150，已保留前 150 人");
+    }
+    state.students = kept.map(function (name, idx) {
+      var animal;
+      if (idx < ANIMALS.length) {
+        animal = ANIMALS[idx]; // 每人一只独立动物，不循环复用
+      } else {
+        var base = ANIMALS[idx % ANIMALS.length];
+        var run = Math.floor(idx / ANIMALS.length) + 1;
+        animal = { e: base.e, n: base.n + " " + run }; // 超池兜底：同名动物加序号区分
+      }
+      return { id: state.nextId++, name: name, animal: animal, active: true, picked: false };
+    });
+    state.pickedOrder = [];
+    state.pickedRound = 0;
+    pickId = null;
+    if (state.students.length === 0) {
+      toast("未能识别到姓名，请检查名单格式");
+      return;
+    }
+    switchView(true);
+    renderSphere();
+    renderRoster();
+    renderStats();
+    var msg = "已导入 " + state.students.length + " 人" + (sourceNote ? "（" + sourceNote + "）" : "");
+    if (dup > 0) msg += "，去重跳过 " + dup + " 个重复姓名";
+    toast(msg);
+    saveRoster();
+  }
+
+  function handleFile(file) {
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      try {
+        var text = decodeText(ev.target.result);
+        importNames(parseNames(text), file.name);
+      } catch (err) {
+        toast("文件读取失败，请换一个文件试试");
+      }
+    };
+    reader.onerror = function () { toast("文件读取失败，请换一个文件试试"); };
+    reader.readAsArrayBuffer(file);
+  }
+
+  fileInput.addEventListener("change", function () {
+    if (fileInput.files && fileInput.files.length > 0) {
+      handleFile(fileInput.files[0]);
+    }
+    fileInput.value = "";
+  });
+
+  ["dragenter", "dragover"].forEach(function (evt) {
+    dropZone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      dropZone.classList.add("drag");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (evt) {
+    dropZone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      dropZone.classList.remove("drag");
+    });
+  });
+  dropZone.addEventListener("drop", function (e) {
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length > 0) handleFile(files[0]);
+  });
+
+  btnImportPaste.addEventListener("click", function () {
+    var text = pasteArea.value;
+    if (!text.trim()) { toast("请先粘贴学生姓名"); return; }
+    sfxClick();
+    importNames(parseNames(text), null);
+  });
+
+  btnSample.addEventListener("click", function () {
+    sfxClick();
+    importNames({ names: SAMPLE_NAMES.slice(), dup: 0 }, "示例");
+    pasteArea.value = "";
+  });
+
+  /* ================= 视图切换 ================= */
+  function switchView(showCall) {
+    importView.hidden = showCall;
+    callView.hidden = !showCall;
+    headerActions.hidden = !showCall;
+  }
+
+  /* ================= 3D 球 ================= */
+  var sphereData = [];   // { el, p:{x,y,z} }
+  var R = 170;
+  var rotX = -0.12, rotY = 0.3;
+  var rafId = null;
+
+  function fibSphere(n) {
+    var pts = [];
+    var golden = (1 + Math.sqrt(5)) / 2;
+    for (var i = 0; i < n; i++) {
+      var y = 1 - (i / Math.max(1, n - 1)) * 2;
+      var r = Math.sqrt(Math.max(0, 1 - y * y));
+      var th = 2 * Math.PI * i / golden;
+      pts.push({ x: Math.cos(th) * r, y: y, z: Math.sin(th) * r });
+    }
+    return pts;
+  }
+
+  function renderSphere() {
+    sphereEl.innerHTML = "";
+    sphereData = [];
+    var active = state.students.filter(function (s) { return s.active; });
+    var n = active.length;
+    if (n === 0) { sphereEl.style.transform = ""; return; }
+
+    var stageW = sphereStage.offsetWidth || 470;
+    var cap = Math.round((stageW / 2) * 0.78);
+    R = Math.min(cap, Math.max(150, 112 + n * 8));
+    var pts = fibSphere(n);
+
+    for (var i = 0; i < n; i++) {
+      var s = active[i];
+      var p = pts[i];
+      var theta = -Math.asin(Math.max(-1, Math.min(1, p.y)));
+      var phi = Math.atan2(p.x, p.z); // 极点时 atan2(0,0)=0，安全
+      var tag = document.createElement("span");
+      tag.className = "tag" + (s.picked ? " done" : "");
+      tag.setAttribute("aria-label", s.name + " " + (s.animal ? s.animal.n : ""));
+      var face = document.createElement("span");
+      face.className = "tag-face";
+      face.style.background = "radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0%, " +
+        TAG_BG[i % TAG_BG.length] + " 60%, " + TAG_BG[i % TAG_BG.length] + " 100%)";
+      var emoji = document.createElement("span");
+      emoji.className = "tag-emoji";
+      emoji.textContent = s.animal.e;
+      var nm = document.createElement("span");
+      nm.className = "tag-name";
+      nm.textContent = s.name;
+      face.appendChild(emoji);
+      face.appendChild(nm);
+      tag.appendChild(face);
+      sphereEl.appendChild(tag);
+      tag.style.transform = "rotateY(" + phi + "rad) rotateX(" + theta + "rad) translateZ(" + R + "px)";
+      sphereData.push({ el: tag, face: face, p: p, id: s.id });
+    }
+  }
+
+  function applySphere() {
+    sphereEl.style.transform = "rotateY(" + rotY + "rad) rotateX(" + rotX + "rad)";
+    var ca = Math.cos(rotX), sa = Math.sin(rotX);
+    var cb = Math.cos(rotY), sb = Math.sin(rotY);
+    for (var i = 0; i < sphereData.length; i++) {
+      var d = sphereData[i];
+      var vx = d.p.x, vy = d.p.y, vz = d.p.z;
+      var y1 = ca * vy - sa * vz;
+      var z1 = sa * vy + ca * vz;
+      var z2 = -sb * vx + cb * z1;
+      var f = (z2 + 1) / 2;
+      var isPicked = d.el.classList.contains("picked");
+      var isDone = d.el.classList.contains("done");
+      var base = (isDone || isPicked) ? 1 : (0.35 + 0.65 * f);
+      d.el.style.opacity = base.toFixed(3);
+      var sc = 0.58 + 0.42 * f;
+      if (isPicked) sc = 1.35;
+      else if (isDone) sc = 0.92 * sc;
+      d.face.style.transform = "scale(" + sc.toFixed(3) + ")";
+    }
+  }
+
+  function tick(now) {
+    switch (state.phase) {
+      case "idle":
+        if (!REDUCED) {
+          rotY += 0.0032;
+          rotX += 0.0011;
+        }
+        break;
+      case "spinning": {
+        var t = Math.min(1, (now - state.spinStart) / state.spinDur);
+        var ease = 1 - Math.pow(1 - t, 3);
+        var speed = state.spinBase * (1 - ease) + state.spinFloor;
+        rotY += speed * 2.4;
+        rotX += speed * 0.55;
+        // 旋转过程音：随着减速，节拍变疏、音调变低
+        if (soundOn) {
+          var k = (speed - state.spinFloor) / (state.spinBase - state.spinFloor);
+          var interval = 120 + 280 * (1 - k);
+          if (now - lastSpinSfx >= interval) {
+            lastSpinSfx = now;
+            tone(480 + k * 640, 0.05, "square", 0.035);
+          }
+        }
+        if (t >= 1) finishSpin();
+        break;
+      }
+      case "stopped": {
+        // 将抽中的同学标签缓慢转到球体正前方，增强“锁中目标”的仪式感
+        if (state.alignStart == null) break;
+        var now2 = performance.now();
+        if (now2 - state.alignStart > 1500) { showResult(); break; }
+        var d = null;
+        for (var i = 0; i < sphereData.length; i++) {
+          if (sphereData[i].id === pickId) { d = sphereData[i]; break; }
+        }
+        if (!d) { showResult(); break; }
+        var x = d.p.x, y = d.p.y, z = d.p.z;
+        var ca2 = Math.cos(rotX), sa2 = Math.sin(rotX);
+        var cb2 = Math.cos(rotY), sb2 = Math.sin(rotY);
+        var y1 = ca2 * y - sa2 * z;
+        var z1 = sa2 * y + ca2 * z;
+        var px = x * cb2 + z1 * sb2;
+        var pz = -x * sb2 + z1 * cb2;
+        var dY = -Math.atan2(px, pz);
+        var zz = px * Math.sin(dY) + pz * Math.cos(dY);
+        var dX = Math.atan2(y1, zz);
+        rotY += dY * 0.16;
+        rotX = Math.max(-1.2, Math.min(1.2, rotX + dX * 0.16));
+        if (Math.abs(dY) < 0.005 && Math.abs(dX) < 0.005) {
+          state.alignStart = null;
+          showResult();
+        }
+        break;
+      }
+    }
+    applySphere();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function startLoop() {
+    if (rafId === null) rafId = requestAnimationFrame(tick);
+  }
+
+  /* ================= 点名流程 ================= */
+  function candidates() {
+    return state.students.filter(function (s) {
+      return s.active && (!state.excludePicked || !s.picked);
+    });
+  }
+
+  function beginSpin() {
+    var pool = candidates();
+    if (pool.length === 0) {
+      toast(state.excludePicked ? "本轮已全部点名完毕，点“重置本轮”重新开始" : "没有可点名的学生，请先勾选参与名单");
+      return;
+    }
+    pickId = pool[Math.floor(Math.random() * pool.length)].id;
+    btnStart.disabled = true;
+    btnStart.textContent = "点名中…";
+    rosterPanel.style.pointerEvents = "none";
+    state.phase = "spinning";
+    state.spinStart = performance.now();
+    state.spinDur = REDUCED ? 420 : (2600 + Math.random() * 1100);
+    state.spinBase = 0.055;
+    state.spinFloor = 0.0018;
+    lastSpinSfx = 0;
+  }
+
+  function finishSpin() {
+    state.phase = "stopped";
+    for (var i = 0; i < sphereData.length; i++) {
+      if (sphereData[i].id === pickId) {
+        sphereData[i].el.classList.add("picked");
+        sphereData[i].el.style.opacity = "1";
+      }
+    }
+    if (REDUCED) { showResult(); return; }
+    state.alignStart = performance.now();
+  }
+
+  function showResult() {
+    var s = state.students.filter(function (x) { return x.id === pickId; })[0];
+    if (!s) return;
+    state.alignStart = null;
+    s.picked = true;
+    state.pickedRound += 1;
+    state.pickedOrder.push(s.id);
+    sfxPick();
+    resultTag.textContent = "本轮第 " + state.pickedRound + " 位";
+    resultAnimal.textContent = s.animal.e;
+    resultName.textContent = s.name;
+    resultOverlay.hidden = false;
+    renderRoster();
+    renderStats();
+    if (!REDUCED) spawnConfetti();
+    state.phase = "idle";
+    resetButtons();
+    startLoop();
+  }
+
+  function hideResult() {
+    resultOverlay.hidden = true;
+    confettiEl.innerHTML = "";
+    removePickedClass();
+    state.alignStart = null;
+  }
+
+  function resetButtons() {
+    btnStart.disabled = false;
+    btnStart.textContent = "🎯 开始点名";
+    rosterPanel.style.pointerEvents = "";
+  }
+
+  function removePickedClass() {
+    for (var i = 0; i < sphereData.length; i++) {
+      sphereData[i].el.classList.remove("picked");
+    }
+  }
+
+  btnStart.addEventListener("click", function () {
+    if (state.phase === "spinning") return;
+    sfxStart();
+    beginSpin();
+    startLoop();
+  });
+
+  btnNext.addEventListener("click", function () {
+    hideResult();
+    sfxStart();
+    beginSpin();
+  });
+
+  btnRedraw.addEventListener("click", function () {
+    var idx = state.pickedOrder.indexOf(pickId);
+    if (idx >= 0) state.pickedOrder.splice(idx, 1);
+    var s = state.students.filter(function (x) { return x.id === pickId; })[0];
+    if (s) {
+      s.picked = false;
+      state.pickedRound = Math.max(1, state.pickedRound - 1);
+    }
+    hideResult();
+    renderRoster();
+    renderStats();
+    renderSphere();
+    sfxStart();
+    beginSpin();
+  });
+
+  btnClose.addEventListener("click", function () {
+    sfxClick();
+    hideResult();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !resultOverlay.hidden) hideResult();
+  });
+
+  /* ================= 课堂音效（WebAudio 合成，无外部文件） ================= */
+  var audioCtx = null;
+  var soundOn = true;
+  var lastSpinSfx = 0;
+
+  function ensureAudio() {
+    if (audioCtx) {
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      return audioCtx;
+    }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      audioCtx = new AC();
+      return audioCtx;
+    } catch (e) { return null; }
+  }
+
+  function tone(freq, dur, type, gain, delay, glideFreq) {
+    if (!soundOn) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var t0 = ctx.currentTime + (delay || 0);
+    var osc = ctx.createOscillator();
+    var g = ctx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    if (glideFreq) osc.frequency.exponentialRampToValueAtTime(glideFreq, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.16, t0 + 0.014);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.06);
+  }
+
+  function sfxClick() { tone(640, 0.07, "triangle", 0.09); }
+  function sfxStart() {
+    tone(392, 0.16, "triangle", 0.16, 0, 660);
+    tone(523, 0.14, "sine", 0.08, 0.07, 784);
+  }
+  function sfxPick() {
+    tone(523.25, 0.16, "sine", 0.18);
+    tone(659.25, 0.16, "sine", 0.18, 0.11);
+    tone(783.99, 0.24, "sine", 0.20, 0.22);
+    tone(1046.5, 0.34, "triangle", 0.10, 0.30);
+  }
+  function sfxReset() { tone(880, 0.09, "triangle", 0.10, 0, 440); }
+
+  btnSound.addEventListener("click", function () {
+    soundOn = !soundOn;
+    btnSound.textContent = soundOn ? "🔊 音效开" : "🔇 音效关";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    if (soundOn) sfxClick();
+  });
+
+  /* ================= 彩纸 ================= */
+  var CONFETTI_EMOJI = ["\uD83C\uDF89", "\u2B50", "\u2728", "\uD83C\uDF8A", "\uD83D\uDCAB"];
+  function spawnConfetti() {
+    confettiEl.innerHTML = "";
+    for (var i = 0; i < 10; i++) {
+      var span = document.createElement("span");
+      span.className = "confetti-emoji";
+      span.textContent = CONFETTI_EMOJI[i % CONFETTI_EMOJI.length];
+      span.style.left = (4 + Math.random() * 92) + "%";
+      span.style.animationDelay = (Math.random() * 0.4) + "s";
+      span.style.fontSize = (16 + Math.random() * 18) + "px";
+      confettiEl.appendChild(span);
+    }
+    setTimeout(function () { confettiEl.innerHTML = ""; }, 2400);
+  }
+
+  /* ================= 名单面板交互 ================= */
+  function renderRoster() {
+    rosterList.innerHTML = "";
+    if (state.students.length === 0) {
+      var li = document.createElement("li");
+      li.className = "roster-empty";
+      li.textContent = "名单为空";
+      rosterList.appendChild(li);
+      rosterCount.textContent = "0 人";
+      return;
+    }
+    rosterCount.textContent = state.students.length + " 人";
+    state.students.forEach(function (s) {
+      var li = document.createElement("li");
+      li.className = "roster-item" + (s.picked ? " done" : "");
+      li.dataset.id = s.id;
+
+      var label = document.createElement("label");
+      label.className = "roster-check";
+      label.setAttribute("aria-label", (s.active ? "参与点名：" : "不参与点名：") + s.name);
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = s.active;
+      cb.dataset.id = s.id;
+      label.appendChild(cb);
+
+      var emoji = document.createElement("span");
+      emoji.className = "roster-emoji";
+      emoji.setAttribute("aria-hidden", "true");
+      emoji.textContent = s.animal.e;
+
+      var nm = document.createElement("span");
+      nm.className = "roster-name";
+      nm.textContent = s.name;
+
+      var st = document.createElement("span");
+      st.className = "roster-state";
+      st.textContent = s.picked ? "✓ 已答" : "";
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "roster-del";
+      del.setAttribute("aria-label", "删除 " + s.name);
+      del.textContent = "\u2715";
+      del.dataset.id = s.id;
+
+      li.appendChild(label);
+      li.appendChild(emoji);
+      li.appendChild(nm);
+      li.appendChild(st);
+      li.appendChild(del);
+      rosterList.appendChild(li);
+    });
+  }
+
+  rosterList.addEventListener("change", function (e) {
+    if (e.target.tagName === "INPUT" && e.target.type === "checkbox") {
+      var id = Number(e.target.dataset.id);
+      var s = state.students.filter(function (x) { return x.id === id; })[0];
+      if (s) { s.active = e.target.checked; }
+      renderSphere();
+      renderStats();
+    }
+  });
+
+  rosterList.addEventListener("click", function (e) {
+    var delBtn = e.target.closest(".roster-del");
+    if (!delBtn) return;
+    var li = delBtn.closest(".roster-item");
+    if (!li.classList.contains("confirming")) {
+      sfxClick();
+      li.classList.add("confirming");
+      delBtn.textContent = "确定？";
+      setTimeout(function () {
+        if (li.parentNode) {
+          li.classList.remove("confirming");
+          delBtn.textContent = "\u2715";
+        }
+      }, 4000);
+      return;
+    }
+    var id = Number(delBtn.dataset.id);
+    sfxClick();
+    state.students = state.students.filter(function (x) { return x.id !== id; });
+    var pi = state.pickedOrder.indexOf(id);
+    if (pi >= 0) state.pickedOrder.splice(pi, 1);
+    renderSphere();
+    renderRoster();
+    renderStats();
+    if (state.students.length === 0) {
+      switchView(false);
+      headerActions.hidden = true;
+      state.phase = "idle";
+      resetButtons();
+      sphereEl.innerHTML = "";
+      sphereData = [];
+    }
+  });
+
+  btnPickAll.addEventListener("click", function () {
+    sfxClick();
+    state.students.forEach(function (s) { s.active = true; });
+    renderRoster();
+    renderSphere();
+    renderStats();
+  });
+  btnPickNone.addEventListener("click", function () {
+    sfxClick();
+    state.students.forEach(function (s) { s.active = false; });
+    renderRoster();
+    renderSphere();
+    renderStats();
+  });
+
+  toggleExclude.addEventListener("change", function () {
+    state.excludePicked = toggleExclude.checked;
+    renderStats();
+  });
+
+  btnResetRound.addEventListener("click", function () {
+    sfxReset();
+    state.students.forEach(function (s) { s.picked = false; });
+    state.pickedOrder = [];
+    state.pickedRound = 0;
+    pickId = null;
+    renderSphere();
+    renderRoster();
+    renderStats();
+    toast("本轮已重置，所有同学重新参与点名");
+  });
+
+  var clearConfirming = false;
+  btnClearAll.addEventListener("click", function () {
+    if (!clearConfirming) {
+      sfxClick();
+      clearConfirming = true;
+      btnClearAll.textContent = "确定清空？";
+      setTimeout(function () {
+        clearConfirming = false;
+        btnClearAll.textContent = "清空名单";
+      }, 4000);
+      return;
+    }
+    clearConfirming = false;
+    btnClearAll.textContent = "清空名单";
+    sfxClick();
+    clearRosterStore();
+    state.students = [];
+    state.pickedOrder = [];
+    state.pickedRound = 0;
+    pickId = null;
+    state.phase = "idle";
+    resetButtons();
+    sphereEl.innerHTML = "";
+    sphereData = [];
+    renderRoster();
+    switchView(false);
+  });
+
+  /* ================= 统计 ================= */
+  function renderStats() {
+    var total = state.students.length;
+    var active = state.students.filter(function (s) { return s.active; }).length;
+    var remain = candidates().length;
+    var picked = state.students.filter(function (s) { return s.picked; }).length;
+    statsBar.textContent = "球上 " + total + " 人 · 可点名 " + remain + " 人 · 已点 " + picked + " 人";
+  }
+
+  /* ================= 启动 ================= */
+  var restored = restoreRoster();
+  if (!restored) {
+    renderRoster();
+    renderStats();
+  }
+  startLoop();
+})();
+</script>
+</body>
+</html>
